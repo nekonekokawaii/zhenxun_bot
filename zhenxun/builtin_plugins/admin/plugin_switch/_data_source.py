@@ -4,7 +4,8 @@ from zhenxun.configs.path_config import DATA_PATH, IMAGE_PATH
 from zhenxun.models.group_console import GroupConsole
 from zhenxun.models.plugin_info import PluginInfo
 from zhenxun.models.task_info import TaskInfo
-from zhenxun.utils.enum import BlockType, PluginType
+from zhenxun.services.cache import Cache
+from zhenxun.utils.enum import BlockType, CacheType, PluginType
 from zhenxun.utils.exception import GroupInfoNotFound
 from zhenxun.utils.image_utils import BuildImage, ImageTemplate, RowStyle
 
@@ -220,6 +221,8 @@ class PluginManage:
         await PluginInfo.filter(plugin_type=PluginType.NORMAL).update(
             status=status, block_type=None if status else BlockType.ALL
         )
+        cache = Cache[PluginInfo](CacheType.PLUGINS)
+        await cache.reload()
         return f"成功将所有功能全局状态修改为: {'开启' if status else '关闭'}"
 
     @classmethod
@@ -271,7 +274,9 @@ class PluginManage:
         参数:
             module: 模块名
         """
-        await PluginInfo.filter(module=module).update(status=False)
+        if plugin := await PluginInfo.get_plugin(module=module):
+            plugin.status = False
+            await plugin.save(update_fields=["status"])
 
     @classmethod
     async def unblock(cls, module: str):
@@ -280,7 +285,9 @@ class PluginManage:
         参数:
             module: 模块名
         """
-        await PluginInfo.filter(module=module).update(status=True)
+        if plugin := await PluginInfo.get_plugin(module=module):
+            plugin.status = True
+            await plugin.save(update_fields=["status"])
 
     @classmethod
     async def block_group_plugin(cls, plugin_name: str, group_id: str) -> str:
