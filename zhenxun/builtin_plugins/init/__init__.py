@@ -11,7 +11,7 @@ from zhenxun.utils.platform import PlatformUtils
 nonebot.load_plugins(str(Path(__file__).parent.resolve()))
 
 try:
-    from .__init_cache import driver
+    from . import __init_cache
 except DbCacheException as e:
     raise SystemError(f"ERROR：{e}")
 
