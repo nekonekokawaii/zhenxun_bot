@@ -154,7 +154,7 @@ async def _():
     return {f"{d.group_id or ''}:{d.user_id or ''}": d for d in data_list}
 
 
-@CacheRoot.getter(CacheType.BAN, result_model=list[BanConsole])
+@CacheRoot.getter(CacheType.BAN, result_model=BanConsole)
 async def _(cache_data: CacheData, user_id: str | None, group_id: str | None = None):
     """获取封禁缓存"""
     if not user_id and not group_id:

@@ -29,15 +29,15 @@ Config.add_plugin_config(
 async def is_ban(user_id: str | None, group_id: str | None) -> int:
     if not user_id and not group_id:
         return 0
-    cache = Cache[list[BanConsole]](CacheType.BAN)
+    cache = Cache[BanConsole](CacheType.BAN)
     group_user, user = await asyncio.gather(
         cache.get(user_id, group_id), cache.get(user_id)
     )
     results = []
     if group_user:
-        results.extend(group_user)
+        results.append(group_user)
     if user:
-        results.extend(user)
+        results.append(user)
     if not results:
         return 0
     for result in results:
