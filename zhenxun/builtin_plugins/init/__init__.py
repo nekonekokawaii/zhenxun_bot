@@ -11,11 +11,16 @@ from zhenxun.utils.platform import PlatformUtils
 nonebot.load_plugins(str(Path(__file__).parent.resolve()))
 
 try:
-    from . import __init_cache
+    from .__init_cache import CacheRoot
 except DbCacheException as e:
     raise SystemError(f"ERROR：{e}")
 
 driver = nonebot.get_driver()
+
+
+@driver.on_startup
+async def _():
+    await CacheRoot.init_non_lazy_caches()
 
 
 @driver.on_bot_connect

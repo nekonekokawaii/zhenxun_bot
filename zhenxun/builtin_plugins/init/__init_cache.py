@@ -3,7 +3,6 @@ from zhenxun.models.bot_console import BotConsole
 from zhenxun.models.group_console import GroupConsole
 from zhenxun.models.level_user import LevelUser
 from zhenxun.models.plugin_info import PluginInfo
-from zhenxun.models.plugin_limit import PluginLimit
 from zhenxun.models.user_console import UserConsole
 from zhenxun.services.cache import CacheData, CacheRoot
 from zhenxun.services.log import logger
@@ -125,7 +124,7 @@ async def _(cache_data: CacheData, data: dict[str, UserConsole] | None):
         await cache_data.set_key(user.user_id, user)
 
 
-@CacheRoot.new(CacheType.LEVEL, False)
+@CacheRoot.new(CacheType.LEVEL)
 async def _():
     """初始化等级缓存"""
     data_list = await LevelUser().all()
@@ -152,52 +151,61 @@ async def _(cache_data: CacheData, user_id: str, group_id: str | None = None):
 async def _():
     """初始化封禁缓存"""
     data_list = await BanConsole.all()
-    return {f"{d.user_id or ''}:{d.group_id or ''}": d for d in data_list}
+    return {f"{d.group_id or ''}:{d.user_id or ''}": d for d in data_list}
 
 
 @CacheRoot.getter(CacheType.BAN, result_model=list[BanConsole])
 async def _(cache_data: CacheData, user_id: str | None, group_id: str | None = None):
     """获取封禁缓存"""
-    key = f"{user_id or ''}:{group_id or ''}"
+    if not user_id and not group_id:
+        return []
+    key = f"{group_id or ''}:{user_id or ''}"
+    logger.info(f"获取封禁缓存: {key}")
     data = await cache_data.get_key(key)
-    if not data:
-        if user_id and group_id:
-            data = await BanConsole.filter(user_id=user_id, group_id=group_id).all()
-        elif user_id:
-            data = await BanConsole.filter(user_id=user_id, group_id__isnull=True).all()
-        elif group_id:
-            data = await BanConsole.filter(
-                user_id__isnull=True, group_id=group_id
-            ).all()
-        if data:
-            await cache_data.set_key(key, data)
-            return data
+    if data:
+        logger.info(f"已存在缓存: {key}:{data}")
+    # if not data:
+    #     start = time.time()
+    #     if user_id and group_id:
+    #         data = await BanConsole.filter(user_id=user_id, group_id=group_id).all()
+    #     elif user_id:
+    #     data = await BanConsole.filter(user_id=user_id, group_id__isnull=True).all()
+    #     elif group_id:
+    #         data = await BanConsole.filter(
+    #             user_id__isnull=True, group_id=group_id
+    #         ).all()
+    #     logger.info(
+    #         f"获取封禁缓存耗时: {time.time() - start:.2f}秒, key: {key}, data: {data}"
+    #     )
+    #     if data:
+    #         await cache_data.set_key(key, data)
+    #         return data
     return data or []
 
 
-@CacheRoot.new(CacheType.LIMIT)
-async def _():
-    """初始化限制缓存"""
-    data_list = await PluginLimit.filter(status=True).all()
-    return {data.module: data for data in data_list}
+# @CacheRoot.new(CacheType.LIMIT)
+# async def _():
+#     """初始化限制缓存"""
+#     data_list = await PluginLimit.filter(status=True).all()
+#     return {data.module: data for data in data_list}
 
 
-@CacheRoot.getter(CacheType.LIMIT, result_model=list[PluginLimit])
-async def _(cache_data: CacheData, module: str):
-    """获取限制缓存"""
-    data = await cache_data.get_key(module)
-    if not data:
-        if limits := await PluginLimit.filter(module=module, status=True):
-            await cache_data.set_key(module, limits)
-            return limits
-    return data or []
+# @CacheRoot.getter(CacheType.LIMIT, result_model=list[PluginLimit])
+# async def _(cache_data: CacheData, module: str):
+#     """获取限制缓存"""
+#     data = await cache_data.get_key(module)
+#     if not data:
+#         if limits := await PluginLimit.filter(module=module, status=True):
+#             await cache_data.set_key(module, limits)
+#             return limits
+#     return data or []
 
 
-@CacheRoot.with_refresh(CacheType.LIMIT)
-async def _(cache_data: CacheData, data: dict[str, list[PluginLimit]] | None):
-    """刷新限制缓存"""
-    if not data:
-        return
-    limits = await PluginLimit.filter(module__in=data.keys(), load_status=True).all()
-    for limit in limits:
-        await cache_data.set_key(limit.module, limit)
+# @CacheRoot.with_refresh(CacheType.LIMIT)
+# async def _(cache_data: CacheData, data: dict[str, list[PluginLimit]] | None):
+#     """刷新限制缓存"""
+#     if not data:
+#         return
+#     limits = await PluginLimit.filter(module__in=data.keys(), load_status=True).all()
+#     for limit in limits:
+#         await cache_data.set_key(limit.module, limit)

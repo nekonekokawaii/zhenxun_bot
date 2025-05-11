@@ -98,7 +98,7 @@ class CacheData(BaseModel):
     with_refresh: Callable[..., Any] | None = None
     expire: int = 600  # 默认10分钟过期
     reload_count: int = 0
-    incremental_update: bool = True
+    lazy_load: bool = True  # 默认延迟加载
     _cache_instance: BaseCache | None = None
     result_model: type | None = None
     _keys: set[str] = set()  # 存储所有缓存键
@@ -168,12 +168,12 @@ class CacheData(BaseModel):
                         try:
                             if hasattr(field, "to_python_value"):
                                 if not field.field_type:
-                                    logger.warning(f"字段 {field_name} 类型为空")
+                                    logger.debug(f"字段 {field_name} 类型为空")
                                     continue
                                 field_value = field.to_python_value(field_value)
                             setattr(instance, field_name, field_value)
                         except Exception as e:
-                            logger.warning(f"设置字段 {field_name} 失败: {e}")
+                            logger.warning(f"设置字段 {field_name} 失败", e=e)
 
                 # 设置 _saved_in_db 标志
                 instance._saved_in_db = True
@@ -333,7 +333,7 @@ class CacheData(BaseModel):
 
     async def get(self, key: str, *args, **kwargs) -> Any:
         """获取缓存"""
-        if not self.reload_count and not self.incremental_update:
+        if not self.reload_count and not self.lazy_load:
             await self.reload(*args, **kwargs)
 
         if not self.getter:
@@ -343,7 +343,7 @@ class CacheData(BaseModel):
 
     async def get_all(self, *args, **kwargs) -> dict[str, Any]:
         """获取所有缓存数据"""
-        if not self.reload_count and not self.incremental_update:
+        if not self.reload_count and not self.lazy_load:
             await self.reload(*args, **kwargs)
 
         if not self.getter:
@@ -523,8 +523,24 @@ class CacheManager:
 
     _data: ClassVar[dict[str, CacheData]] = {}
 
-    def new(self, name: str, incremental_update: bool = True, expire: int = 600):
-        """注册新缓存"""
+    async def init_non_lazy_caches(self):
+        """初始化所有非延迟加载的缓存"""
+        for name, cache in self._data.items():
+            if not cache.lazy_load:
+                try:
+                    await cache.reload()
+                    logger.info(f"初始化缓存 {name} 完成")
+                except Exception as e:
+                    logger.error(f"初始化缓存 {name} 失败: {e}")
+
+    def new(self, name: str, lazy_load: bool = True, expire: int = 600):
+        """注册新缓存
+
+        Args:
+            name: 缓存名称
+            lazy_load: 是否延迟加载，默认为True。为False时会在程序启动时自动加载
+            expire: 过期时间（秒）
+        """
 
         def wrapper(func: Callable):
             _name = name.upper()
@@ -535,7 +551,7 @@ class CacheManager:
                 name=_name,
                 func=func,
                 expire=expire,
-                incremental_update=incremental_update,
+                lazy_load=lazy_load,
             )
             return func
 

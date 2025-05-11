@@ -159,9 +159,9 @@ async def auth(
                 auth_group(plugin, entity, message),
                 auth_admin(plugin, session),
                 auth_plugin(plugin, session, event),
+                auth_limit(plugin, session),
             ]
         )
-        await auth_limit(plugin, session)
     except SkipPluginException as e:
         LimitManager.unblock(module, entity.user_id, entity.group_id, entity.channel_id)
         logger.info(str(e), LOGGER_COMMAND, session=session)

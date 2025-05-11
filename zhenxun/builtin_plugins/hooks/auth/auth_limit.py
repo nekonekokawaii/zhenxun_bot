@@ -1,5 +1,6 @@
 from typing import ClassVar
 
+import nonebot
 from nonebot_plugin_uninfo import Uninfo
 from pydantic import BaseModel
 
@@ -18,6 +19,14 @@ from zhenxun.utils.utils import (
 from .config import LOGGER_COMMAND
 from .exception import SkipPluginException
 
+driver = nonebot.get_driver()
+
+
+@driver.on_startup
+async def _():
+    """初始化限制"""
+    await LimitManager.init_limit()
+
 
 class Limit(BaseModel):
     limit: PluginLimit
@@ -33,6 +42,13 @@ class LimitManager:
     cd_limit: ClassVar[dict[str, Limit]] = {}
     block_limit: ClassVar[dict[str, Limit]] = {}
     count_limit: ClassVar[dict[str, Limit]] = {}
+
+    @classmethod
+    async def init_limit(cls):
+        """初始化限制"""
+        limit_list = await PluginLimit.filter(status=True).all()
+        for limit in limit_list:
+            cls.add_limit(limit)
 
     @classmethod
     def add_limit(cls, limit: PluginLimit):
@@ -169,9 +185,7 @@ async def auth_limit(plugin: PluginInfo, session: Uninfo):
     """
     entity = get_entity_ids(session)
     if plugin.module not in LimitManager.add_module:
-        limit_list: list[PluginLimit] = await plugin.plugin_limit.filter(
-            status=True
-        ).all()  # type: ignore
+        limit_list = await PluginLimit.filter(module=plugin.module, status=True).all()
         for limit in limit_list:
             LimitManager.add_limit(limit)
     if entity.user_id:
