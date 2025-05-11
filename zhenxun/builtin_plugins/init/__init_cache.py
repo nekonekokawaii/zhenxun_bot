@@ -160,10 +160,7 @@ async def _(cache_data: CacheData, user_id: str | None, group_id: str | None = N
     if not user_id and not group_id:
         return []
     key = f"{group_id or ''}:{user_id or ''}"
-    logger.info(f"获取封禁缓存: {key}")
     data = await cache_data.get_key(key)
-    if data:
-        logger.info(f"已存在缓存: {key}:{data}")
     # if not data:
     #     start = time.time()
     #     if user_id and group_id:
