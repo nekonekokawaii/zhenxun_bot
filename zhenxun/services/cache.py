@@ -145,16 +145,7 @@ class CacheData(BaseModel):
                         # 跳过反向关系字段
                         if hasattr(field, "_related_name"):
                             continue
-                        # 处理 CharEnumField
-                        if hasattr(field, "enum_class"):
-                            try:
-                                processed_value[field_name] = field.enum_class(
-                                    field_value
-                                )
-                            except ValueError:
-                                processed_value[field_name] = None
-                        else:
-                            processed_value[field_name] = field_value
+                        processed_value[field_name] = field_value
 
                 logger.debug(f"处理后的值: {processed_value}")
 

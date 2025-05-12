@@ -56,6 +56,9 @@ class LevelUser(Model):
             level: 权限等级
             group_flag: 是否被自动更新刷新权限 0:是, 1:否.
         """
+        if await cls.exists(user_id=user_id, group_id=group_id, level=level):
+            # 权限相同时跳过
+            return
         await cls.update_or_create(
             user_id=user_id,
             group_id=group_id,
@@ -122,8 +125,7 @@ class LevelUser(Model):
         return [
             # 将user_id改为user_id
             "ALTER TABLE level_users RENAME COLUMN user_qq TO user_id;",
-            "ALTER TABLE level_users "
-            "ALTER COLUMN user_id TYPE character varying(255);",
+            "ALTER TABLE level_users ALTER COLUMN user_id TYPE character varying(255);",
             # 将user_id字段类型改为character varying(255)
             "ALTER TABLE level_users "
             "ALTER COLUMN group_id TYPE character varying(255);",
