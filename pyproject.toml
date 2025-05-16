@@ -39,7 +39,7 @@ dateparser = "^1.2.0"
 bilireq = "0.2.3post0"
 python-jose = { extras = ["cryptography"], version = "^3.3.0" }
 python-multipart = "^0.0.9"
-aiocache = ">=0.12, <1.0.0"
+aiocache = {extras = ["redis"], version = "^0.12.3"}
 py-cpuinfo = "^9.0.0"
 nonebot-plugin-alconna = "^0.54.0"
 tenacity = "^9.0.0"
