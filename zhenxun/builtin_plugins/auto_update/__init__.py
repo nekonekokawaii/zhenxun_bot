@@ -11,7 +11,6 @@ from nonebot_plugin_alconna import (
     on_alconna,
     store_true,
 )
-from nonebot_plugin_session import EventSession
 from nonebot_plugin_uninfo import Uninfo
 
 from zhenxun.configs.utils import PluginExtraData
